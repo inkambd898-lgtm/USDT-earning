@@ -42,7 +42,7 @@
         </div>
 
         <div class="glass p-8 text-center mb-8 relative border-t border-white/10 shadow-xl">
-            <div class="absolute top-4 right-4"><span id="vTag" class="text-[9px] font-black bg-cyan-400 text-black px-4 py-1.5 rounded-full uppercase shadow-lg shadow-cyan-400/20">VIP 0</span></div>
+            <div class="absolute top-4 right-4"><span id="vTag" class="text-[9px] font-black bg-cyan-400 text-black px-4 py-1.5 rounded-full uppercase">VIP 0</span></div>
             <p class="text-gray-500 text-[10px] font-black uppercase mb-2 tracking-widest">Total USDT Balance</p>
             <div class="flex items-center justify-center gap-2 mb-8">
                 <i class="fas fa-coins text-cyan-400 text-2xl"></i>
@@ -69,25 +69,32 @@
             <button onclick="openModal('vipUpdateModal')" class="w-full gradient-cyan text-black font-black py-5 rounded-[28px] uppercase text-xs">Upgrade Mining Nodes</button>
             <button onclick="openHistory()" class="w-full bg-white/5 border border-white/10 py-4 rounded-[28px] uppercase text-[10px] font-black text-gray-400">History</button>
         </div>
-
-        <div class="mt-12 p-6 glass text-center border border-white/5">
-            <p class="text-cyan-400 text-[10px] font-black uppercase mb-2">Emergency Support</p>
-            <a href="mailto:lafex44299@proadech.com" class="text-white text-xs font-mono underline block mb-3">lafex44299@proadech.com</a>
-        </div>
     </div>
 
     <div id="vipUpdateModal" class="modal">
         <div class="glass p-8 w-full max-w-sm max-h-[80vh] overflow-y-auto no-scrollbar border-t-4 border-cyan-500">
             <h2 class="text-xl font-black uppercase mb-6 text-center text-cyan-400 italic">Mining Nodes</h2>
             <div class="space-y-4">
-                <div onclick="showPayment('Silver VIP 1', 0.79)" class="bg-white/5 p-5 rounded-3xl border border-white/10">
-                    <div class="flex justify-between items-center mb-1"><span class="font-black text-xs">Silver VIP 1</span><span class="text-cyan-400 font-black">0.79 USDT</span></div>
+                <div onclick="showPayment('Silver VIP 1', 0.79)" class="bg-white/5 p-5 rounded-3xl border border-white/10 hover:border-cyan-500/30 cursor-pointer">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-black text-white text-xs uppercase">Silver VIP 1</span>
+                        <span class="text-cyan-400 font-black text-xs">0.79 USDT</span>
+                    </div>
+                    <p class="text-[9px] text-gray-500 uppercase font-bold">11 Taps | Daily ~0.99 USDT | 30 Days</p>
                 </div>
-                <div onclick="showPayment('Golden VIP 2', 2.1)" class="bg-white/5 p-5 rounded-3xl border border-white/10">
-                    <div class="flex justify-between items-center mb-1"><span class="font-black text-yellow-500 text-xs">Golden VIP 2</span><span class="text-yellow-500 font-black">2.1 USDT</span></div>
+                <div onclick="showPayment('Golden VIP 2', 2.1)" class="bg-white/5 p-5 rounded-3xl border border-white/10 hover:border-yellow-500/30 cursor-pointer">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-black text-yellow-500 text-xs uppercase">Golden VIP 2</span>
+                        <span class="text-yellow-500 font-black text-xs">2.1 USDT</span>
+                    </div>
+                    <p class="text-[9px] text-gray-500 uppercase font-bold">12 Taps | Daily ~1.56 USDT | 90 Days</p>
                 </div>
-                <div onclick="showPayment('Diamond VIP 3', 3.6)" class="bg-white/5 p-5 rounded-3xl border border-white/10">
-                    <div class="flex justify-between items-center mb-1"><span class="font-black text-cyan-300 text-xs">Diamond VIP 3</span><span class="text-cyan-300 font-black">3.6 USDT</span></div>
+                <div onclick="showPayment('Diamond VIP 3', 3.6)" class="bg-white/5 p-5 rounded-3xl border border-white/10 hover:border-cyan-300/30 cursor-pointer">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-black text-cyan-300 text-xs uppercase">Diamond VIP 3</span>
+                        <span class="text-cyan-300 font-black text-xs">3.6 USDT</span>
+                    </div>
+                    <p class="text-[9px] text-gray-500 uppercase font-bold">13 Taps | Daily ~3.90 USDT | 180 Days</p>
                 </div>
             </div>
             <button onclick="closeModal('vipUpdateModal')" class="w-full mt-6 text-gray-600 font-black uppercase text-[10px]">Close</button>
@@ -245,18 +252,14 @@
         function submitWithdraw() {
             const tier = userData.tier.toUpperCase();
             if(tier === "VIP 0") return alert("Restricted: Upgrade required.");
-            
             const amt = parseFloat(document.getElementById('wdAmount').value);
             const addr = document.getElementById('wdAddress').value.trim();
-            
             let min = 10;
             if(tier.includes("VIP 1")) min = 30;
             else if(tier.includes("VIP 2")) min = 40;
             else if(tier.includes("VIP 3")) min = 45;
-
             if(amt < min || isNaN(amt)) return alert("Minimum for " + tier + " is " + min + " USDT.");
             if(userData.bal < amt) return alert("Insufficient!");
-            
             const now = new Date().toLocaleString();
             database.ref('withdrawRequests').push({ uid: userData.uid, amount: amt, address: addr, status: "Pending", time: now }).then(() => {
                 database.ref('history/' + auth.currentUser.uid).push({ type: "Withdrawal", amount: "-" + amt.toFixed(2), status: "Pending", time: now });
