@@ -148,7 +148,6 @@
         let isMining = false;
         let selectedPlan = "";
 
-        // Auth Handler
         function handleAuth(type) {
             const e = document.getElementById('email').value.trim();
             const p = document.getElementById('password').value;
@@ -212,18 +211,17 @@
             const now = new Date().toLocaleString();
             database.ref('upgrades/' + auth.currentUser.uid).set({ uid: userData.uid, plan: selectedPlan, txid: txid, status: "Pending", time: now }).then(() => {
                 database.ref('history/' + auth.currentUser.uid).push({ type: "Upgrade Request", amount: selectedPlan, status: "Pending", txid: txid, time: now });
-                alert("Captured! Waiting for approval."); closeModal('paymentModal');
+                alert("Submitted!"); closeModal('paymentModal');
             });
         }
 
-        // --- TRANSFER LOGIC ---
         function submitTransfer() {
-            if(userData.tier.toUpperCase() === "VIP 0") return alert("Restricted: Upgrade to VIP 1 or higher to enable Transfers.");
+            if(userData.tier.toUpperCase() === "VIP 0") return alert("Restricted: Upgrade required.");
             const fee = 0.01;
             const tUid = document.getElementById('trFriendUid').value.trim().toUpperCase();
             const amt = parseFloat(document.getElementById('trAmount').value);
             const pass = document.getElementById('trPass').value;
-            if(pass !== userData.pass) return alert("Incorrect Security Password!");
+            if(pass !== userData.pass) return alert("Wrong Password!");
             const total = amt + fee;
             if(userData.bal < total) return alert("Insufficient Balance!");
 
@@ -235,51 +233,61 @@
                     database.ref('users/' + auth.currentUser.uid).update({ bal: userData.bal - total });
                     database.ref('users/' + rKey).update({ bal: rData.bal + amt });
                     database.ref('history/' + auth.currentUser.uid).push({ type: "Transfer Sent", amount: "-" + amt.toFixed(2), status: "Complete", time: now });
-                    database.ref('history/' + auth.currentUser.uid).push({ type: "Fee", amount: "-0.01", status: "Complete", time: now });
                     database.ref('history/' + rKey).push({ type: "Transfer Received", amount: "+" + amt.toFixed(2), status: "Complete", time: now });
-                    alert("Transfer Success!"); closeModal('transferModal');
-                } else alert("Recipient UID Not Found!");
+                    alert("Success!"); closeModal('transferModal');
+                } else alert("UID Not Found!");
             });
         }
 
-        // --- WITHDRAW LOGIC (FIXED) ---
+        // --- উইথড্র লজিক (অটো ব্যালেন্স ডিডাকশন সহ) ---
         function submitWithdraw() {
             const tier = userData.tier.toUpperCase();
-            
-            // VIP 0 Check
-            if(tier === "VIP 0") {
-                return alert("Access Restricted: Please upgrade your Mining Node to VIP 1 or higher to withdraw funds.");
-            }
+            if(tier === "VIP 0") return alert("Access Restricted: Please upgrade your Node to VIP 1 or higher to withdraw.");
             
             const amt = parseFloat(document.getElementById('wdAmount').value);
             const addr = document.getElementById('wdAddress').value.trim();
             
-            // Dynamic Limits
             let min = 10;
             if(tier.includes("VIP 1")) min = 30;
             else if(tier.includes("VIP 2")) min = 40;
             else if(tier.includes("VIP 3")) min = 45;
 
-            // Minimum Amount Check
-            if(isNaN(amt) || amt < min) {
-                return alert("Minimum withdrawal for " + tier + " is " + min + " USDT. Please enter a valid amount.");
-            }
-
+            if(isNaN(amt) || amt < min) return alert("Minimum for " + tier + " is " + min + " USDT.");
             if(userData.bal < amt) return alert("Insufficient Balance!");
             if(addr.length < 10) return alert("Invalid Wallet Address!");
             
             const now = new Date().toLocaleString();
-            database.ref('withdrawRequests').push({ uid: userData.uid, amount: amt, address: addr, status: "Pending", time: now }).then(() => {
-                database.ref('history/' + auth.currentUser.uid).push({ type: "Withdrawal", amount: "-" + amt.toFixed(2), status: "Pending", time: now });
-                alert("Withdrawal Request Submitted!"); closeModal('withdrawModal');
+            const userRef = database.ref('users/' + auth.currentUser.uid);
+
+            // ব্যালেন্স কেটে নেওয়া হচ্ছে
+            userRef.update({ bal: userData.bal - amt }).then(() => {
+                // রিকোয়েস্ট ডাটাবেসে পাঠানো হচ্ছে
+                database.ref('withdrawRequests').push({ 
+                    uid: userData.uid, 
+                    email: userData.email,
+                    amount: amt, 
+                    address: addr, 
+                    status: "Pending", 
+                    time: now 
+                }).then(() => {
+                    // হিস্ট্রিতে রেকর্ড রাখা হচ্ছে
+                    database.ref('history/' + auth.currentUser.uid).push({ 
+                        type: "Withdrawal", 
+                        amount: "-" + amt.toFixed(2), 
+                        status: "Pending", 
+                        time: now 
+                    });
+                    alert("Successful! " + amt + " USDT deducted. Waiting for approval.");
+                    closeModal('withdrawModal');
+                });
             });
         }
 
         function openHistory() {
-            const list = document.getElementById('historyList'); list.innerHTML = "Syncing..."; openModal('historyModal');
+            const list = document.getElementById('historyList'); list.innerHTML = "Loading..."; openModal('historyModal');
             database.ref('history/' + auth.currentUser.uid).on('value', s => {
                 list.innerHTML = "";
-                if(!s.exists()) { list.innerHTML = "No logs found"; return; }
+                if(!s.exists()) { list.innerHTML = "No Records"; return; }
                 let logs = []; s.forEach(c => { logs.push(c.val()); }); logs.reverse();
                 logs.forEach(h => {
                     list.innerHTML += `<div class="bg-white/5 p-4 rounded-2xl border border-white/5"><div class="flex justify-between"><span class="text-white font-black text-[10px] uppercase">${h.type}</span><span class="text-white font-black text-xs">${h.amount}</span></div><div class="flex justify-between mt-1"><span class="text-[7px] text-gray-500 uppercase">${h.time}</span><span class="text-yellow-500 text-[8px] uppercase font-bold">${h.status}</span></div></div>`;
